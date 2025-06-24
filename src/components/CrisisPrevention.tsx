@@ -22,6 +22,15 @@ interface CrisisPreventionProps {
   riskLevel: string;
 }
 
+interface InterventionStrategy {
+  title: string;
+  description: string;
+  action: string;
+  icon: React.ComponentType<any>;
+  color: string;
+  urgent?: boolean;
+}
+
 const CrisisPrevention: React.FC<CrisisPreventionProps> = ({ riskLevel }) => {
   const [interventionStep, setInterventionStep] = useState(1);
   const [interventionsUsed, setInterventionsUsed] = useState<string[]>([]);
@@ -33,7 +42,7 @@ const CrisisPrevention: React.FC<CrisisPreventionProps> = ({ riskLevel }) => {
     { name: 'SAMHSA National Helpline', number: '1-800-662-4357', available: '24/7' },
   ];
 
-  const interventionStrategies = {
+  const interventionStrategies: Record<string, InterventionStrategy[]> = {
     low: [
       {
         title: 'Mindfulness Check-in',
@@ -120,7 +129,7 @@ const CrisisPrevention: React.FC<CrisisPreventionProps> = ({ riskLevel }) => {
     console.log(`Intervention used: ${title} at ${new Date().toISOString()}`);
   };
 
-  const currentStrategies = interventionStrategies[riskLevel as keyof typeof interventionStrategies] || [];
+  const currentStrategies = interventionStrategies[riskLevel] || [];
 
   return (
     <div className="space-y-6">
