@@ -11,6 +11,7 @@ import SleepMonitor from '@/components/SleepMonitor';
 import ActivityAnalyzer from '@/components/ActivityAnalyzer';
 import CrisisPrevention from '@/components/CrisisPrevention';
 import PredictiveAnalytics from '@/components/PredictiveAnalytics';
+import UserMenu from '@/components/UserMenu';
 
 const Index = () => {
   const [riskLevel, setRiskLevel] = useState('low');
@@ -52,16 +53,19 @@ const Index = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl">
-              <Brain className="h-8 w-8 text-white" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl">
+                <Brain className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  MindGuard
+                </h1>
+                <p className="text-lg text-gray-600">AI-Powered Mental Health Crisis Prevention</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                MindGuard
-              </h1>
-              <p className="text-lg text-gray-600">AI-Powered Mental Health Crisis Prevention</p>
-            </div>
+            <UserMenu />
           </div>
 
           {/* Risk Status Dashboard */}
