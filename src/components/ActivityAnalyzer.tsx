@@ -5,9 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Activity, Smartphone, Users, MapPin, Clock, TrendingDown, AlertTriangle } from 'lucide-react';
+import { Activity, Smartphone, Users, MapPin, Clock, TrendingDown, AlertTriangle, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const ActivityAnalyzer = () => {
+  const { toast } = useToast();
   const [activityData, setActivityData] = useState({
     steps: 8500,
     screenTime: 6.5, // hours
@@ -27,72 +30,68 @@ const ActivityAnalyzer = () => {
   }>>([]);
 
   const [behaviorAlerts, setBehaviorAlerts] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // AI-powered behavioral pattern analysis
   useEffect(() => {
-    const alerts = [];
-    let riskScore = 0;
+    loadActivityHistory();
+  }, []);
 
-    // Analyze sedentary behavior
-    if (activityData.steps < 5000) {
-      alerts.push('Low Physical Activity');
-      riskScore += 2;
-    }
+  const loadActivityHistory = async () => {
+    const { data, error } = await supabase
+      .from('activity_entries')
+      .select('*')
+      .order('timestamp', { ascending: false })
+      .limit(7);
 
-    // Screen time analysis
-    if (activityData.screenTime > 8) {
-      alerts.push('Excessive Screen Time');
-      riskScore += 2;
-    }
-
-    // Social isolation detection
-    if (activityData.socialInteractions < 1) {
-      alerts.push('Social Isolation Risk');
-      riskScore += 3;
-    }
-
-    // Lack of outdoor activity
-    if (activityData.outsideTime < 0.5) {
-      alerts.push('Insufficient Outdoor Time');
-      riskScore += 1;
-    }
-
-    // Exercise deficit
-    if (activityData.exerciseMinutes < 15) {
-      alerts.push('Minimal Exercise Activity');
-      riskScore += 1;
-    }
-
-    // Historical pattern analysis
-    if (activityHistory.length >= 3) {
-      const recentAvgSteps = activityHistory.slice(0, 3).reduce((sum, entry) => sum + entry.steps, 0) / 3;
-      const olderAvgSteps = activityHistory.slice(3, 6).reduce((sum, entry) => sum + entry.steps, 0) / 3;
-      
-      if (recentAvgSteps < olderAvgSteps * 0.7) {
-        alerts.push('Declining Activity Pattern');
-        riskScore += 2;
-      }
-
-      const recentAvgSocial = activityHistory.slice(0, 3).reduce((sum, entry) => sum + entry.socialInteractions, 0) / 3;
-      if (recentAvgSocial < 1) {
-        alerts.push('Progressive Social Withdrawal');
-        riskScore += 3;
+    if (!error && data) {
+      setActivityHistory(data.map(entry => ({
+        date: new Date(entry.timestamp),
+        steps: entry.steps,
+        screenTime: entry.screen_time,
+        socialInteractions: entry.social_interactions,
+        exerciseMinutes: entry.exercise_minutes,
+        outsideTime: entry.outdoor_time,
+        riskScore: entry.risk_score,
+      })));
+      if (data.length > 0) {
+        setBehaviorAlerts(data[0].behavior_alerts || []);
       }
     }
+  };
 
-    setBehaviorAlerts(alerts);
-  }, [activityData, activityHistory]);
+  const handleActivitySubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-activity', {
+        body: {
+          steps: activityData.steps,
+          screenTime: activityData.screenTime,
+          socialInteractions: activityData.socialInteractions,
+          exerciseMinutes: activityData.exerciseMinutes,
+          outdoorTime: activityData.outsideTime,
+        }
+      });
 
-  const handleActivitySubmit = () => {
-    const riskScore = behaviorAlerts.length * 1.5; // Simple risk calculation
-    const newEntry = {
-      date: new Date(),
-      ...activityData,
-      riskScore,
-    };
+      if (error) throw error;
 
-    setActivityHistory(prev => [newEntry, ...prev.slice(0, 6)]); // Keep last 7 entries
-    console.log('Activity data sent for behavioral analysis:', newEntry);
+      toast({
+        title: "Activity data recorded",
+        description: data.alerts.length > 0
+          ? `AI detected ${data.alerts.length} behavioral alerts`
+          : "Your activity has been analyzed and saved",
+      });
+
+      setBehaviorAlerts(data.alerts || []);
+      await loadActivityHistory();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getActivityLevel = () => {
@@ -237,8 +236,10 @@ const ActivityAnalyzer = () => {
           <Button 
             onClick={handleActivitySubmit} 
             className="w-full bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700"
+            disabled={isSubmitting}
           >
-            Record Daily Activity
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSubmitting ? 'Analyzing with AI...' : 'Record Daily Activity'}
           </Button>
         </CardContent>
       </Card>

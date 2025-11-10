@@ -5,9 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Moon, Sun, Clock, TrendingDown, TrendingUp, AlertCircle } from 'lucide-react';
+import { Moon, Sun, Clock, TrendingDown, TrendingUp, AlertCircle, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const SleepMonitor = () => {
+  const { toast } = useToast();
   const [sleepData, setSleepData] = useState({
     bedtime: '23:00',
     wakeTime: '07:00',
@@ -25,6 +28,33 @@ const SleepMonitor = () => {
   }>>([]);
 
   const [riskFactors, setRiskFactors] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    loadSleepHistory();
+  }, []);
+
+  const loadSleepHistory = async () => {
+    const { data, error } = await supabase
+      .from('sleep_entries')
+      .select('*')
+      .order('timestamp', { ascending: false })
+      .limit(7);
+
+    if (!error && data) {
+      setSleepHistory(data.map(entry => ({
+        date: new Date(entry.timestamp),
+        duration: entry.duration,
+        quality: entry.quality,
+        bedtime: entry.bedtime,
+        wakeTime: entry.wake_time,
+        interruptions: entry.interruptions,
+      })));
+      if (data.length > 0) {
+        setRiskFactors(data[0].risk_factors || []);
+      }
+    }
+  };
 
   // Calculate sleep duration
   const calculateDuration = (bedtime: string, wakeTime: string) => {
@@ -39,45 +69,38 @@ const SleepMonitor = () => {
     return (wake.getTime() - bed.getTime()) / (1000 * 60 * 60); // hours
   };
 
-  // AI-powered sleep pattern analysis
-  useEffect(() => {
-    const duration = calculateDuration(sleepData.bedtime, sleepData.wakeTime);
-    const factors = [];
+  const handleSleepSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-sleep', {
+        body: { 
+          bedtime: sleepData.bedtime,
+          wakeTime: sleepData.wakeTime,
+          quality: sleepData.quality,
+          interruptions: sleepData.interruptions,
+        }
+      });
 
-    if (duration < 6) factors.push('Insufficient Sleep Duration');
-    if (duration > 10) factors.push('Excessive Sleep Duration');
-    if (sleepData.quality < 5) factors.push('Poor Sleep Quality');
-    if (sleepData.interruptions > 3) factors.push('Frequent Sleep Interruptions');
-    
-    // Check for irregular sleep schedule
-    if (sleepHistory.length > 0) {
-      const avgBedtime = sleepHistory.reduce((sum, entry) => {
-        const time = new Date(`2024-01-01 ${entry.bedtime}`).getHours();
-        return sum + time;
-      }, 0) / sleepHistory.length;
-      
-      const currentBedtime = new Date(`2024-01-01 ${sleepData.bedtime}`).getHours();
-      if (Math.abs(currentBedtime - avgBedtime) > 2) {
-        factors.push('Irregular Sleep Schedule');
-      }
+      if (error) throw error;
+
+      toast({
+        title: "Sleep data recorded",
+        description: data.riskFactors.length > 0
+          ? `AI detected ${data.riskFactors.length} sleep risk factors`
+          : "Your sleep has been analyzed and saved",
+      });
+
+      setRiskFactors(data.riskFactors || []);
+      await loadSleepHistory();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setRiskFactors(factors);
-  }, [sleepData, sleepHistory]);
-
-  const handleSleepSubmit = () => {
-    const duration = calculateDuration(sleepData.bedtime, sleepData.wakeTime);
-    const newEntry = {
-      date: new Date(),
-      duration,
-      quality: sleepData.quality,
-      bedtime: sleepData.bedtime,
-      wakeTime: sleepData.wakeTime,
-      interruptions: sleepData.interruptions,
-    };
-
-    setSleepHistory(prev => [newEntry, ...prev.slice(0, 6)]); // Keep last 7 entries
-    console.log('Sleep data sent for analysis:', newEntry);
   };
 
   const getAverageDuration = () => {
@@ -213,8 +236,10 @@ const SleepMonitor = () => {
           <Button 
             onClick={handleSleepSubmit} 
             className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+            disabled={isSubmitting}
           >
-            Record Sleep Data
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSubmitting ? 'Analyzing with AI...' : 'Record Sleep Data'}
           </Button>
         </CardContent>
       </Card>

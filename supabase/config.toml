@@ -1,1 +1,13 @@
 project_id = "dwmrriurtatfmvsyciry"
+
+[functions.analyze-mood]
+verify_jwt = true
+
+[functions.analyze-sleep]
+verify_jwt = true
+
+[functions.analyze-activity]
+verify_jwt = true
+
+[functions.assess-risk]
+verify_jwt = true

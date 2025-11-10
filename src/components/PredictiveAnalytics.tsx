@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -13,51 +14,46 @@ import {
   AlertTriangle,
   CheckCircle,
   BarChart3,
-  Zap
+  Zap,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface PredictiveAnalyticsProps {
   riskLevel: string;
+  riskData: any;
+  onRefresh: () => void;
 }
 
-const PredictiveAnalytics: React.FC<PredictiveAnalyticsProps> = ({ riskLevel }) => {
-  const [predictiveData, setPredictiveData] = useState({
-    crisisRisk: 25,
-    depressionRisk: 35,
-    anxietyRisk: 40,
-    stressLevel: 60,
-    resilienceScore: 75,
-    socialSupport: 80,
-  });
+const PredictiveAnalytics: React.FC<PredictiveAnalyticsProps> = ({ riskLevel, riskData, onRefresh }) => {
+  const { toast } = useToast();
+  const [isAssessing, setIsAssessing] = useState(false);
 
-  const [trendData, setTrendData] = useState([
-    { period: '7 days ago', risk: 15, trend: 'stable' },
-    { period: '5 days ago', risk: 20, trend: 'increasing' },
-    { period: '3 days ago', risk: 28, trend: 'increasing' },
-    { period: 'Today', risk: 25, trend: 'stable' },
-  ]);
+  const runRiskAssessment = async () => {
+    setIsAssessing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('assess-risk', {});
 
-  const [aiInsights, setAiInsights] = useState([
-    'Sleep pattern irregularity detected - consider sleep hygiene improvements',
-    'Social interaction frequency below optimal threshold',
-    'Physical activity levels support positive mental health outcomes',
-    'Stress management techniques showing effectiveness',
-  ]);
+      if (error) throw error;
 
-  // Simulate real-time AI prediction updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPredictiveData(prev => ({
-        ...prev,
-        crisisRisk: Math.max(5, Math.min(95, prev.crisisRisk + (Math.random() - 0.5) * 10)),
-        depressionRisk: Math.max(5, Math.min(95, prev.depressionRisk + (Math.random() - 0.5) * 8)),
-        anxietyRisk: Math.max(5, Math.min(95, prev.anxietyRisk + (Math.random() - 0.5) * 12)),
-        stressLevel: Math.max(5, Math.min(95, prev.stressLevel + (Math.random() - 0.5) * 15)),
-      }));
-    }, 45000); // Update every 45 seconds
+      toast({
+        title: "Risk assessment complete",
+        description: `Overall wellness: ${data.overallWellness}%`,
+      });
 
-    return () => clearInterval(interval);
-  }, []);
+      onRefresh();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsAssessing(false);
+    }
+  };
 
   const getRiskColor = (risk: number) => {
     if (risk >= 70) return 'bg-red-500';
@@ -72,53 +68,31 @@ const PredictiveAnalytics: React.FC<PredictiveAnalyticsProps> = ({ riskLevel }) 
   };
 
   const getOverallWellness = () => {
-    const avgRisk = (predictiveData.crisisRisk + predictiveData.depressionRisk + predictiveData.anxietyRisk) / 3;
-    const wellness = 100 - avgRisk + (predictiveData.resilienceScore + predictiveData.socialSupport) / 2;
-    return Math.max(0, Math.min(100, wellness / 2));
+    if (!riskData) return 70;
+    return riskData.overall_wellness || 70;
   };
 
   const metrics = [
     {
-      title: 'Crisis Risk',
-      value: predictiveData.crisisRisk,
+      title: 'Mood Risk',
+      value: riskData?.mood_risk || 0,
       icon: AlertTriangle,
-      description: 'Probability of mental health crisis in next 7 days',
-      color: getRiskColor(predictiveData.crisisRisk),
+      description: 'Risk indicators from mood tracking',
+      color: getRiskColor(riskData?.mood_risk || 0),
     },
     {
-      title: 'Depression Risk',
-      value: predictiveData.depressionRisk,
-      icon: TrendingDown,
-      description: 'Risk indicators for depressive episode',
-      color: getRiskColor(predictiveData.depressionRisk),
+      title: 'Sleep Risk',
+      value: riskData?.sleep_risk || 0,
+      icon: Moon,
+      description: 'Risk indicators from sleep patterns',
+      color: getRiskColor(riskData?.sleep_risk || 0),
     },
     {
-      title: 'Anxiety Level',
-      value: predictiveData.anxietyRisk,
-      icon: Zap,
-      description: 'Current anxiety risk assessment',
-      color: getRiskColor(predictiveData.anxietyRisk),
-    },
-    {
-      title: 'Stress Level',
-      value: predictiveData.stressLevel,
+      title: 'Activity Risk',
+      value: riskData?.activity_risk || 0,
       icon: Activity,
-      description: 'Cumulative stress indicator',
-      color: getRiskColor(predictiveData.stressLevel),
-    },
-    {
-      title: 'Resilience Score',
-      value: predictiveData.resilienceScore,
-      icon: CheckCircle,
-      description: 'Mental resilience and coping capacity',
-      color: 'bg-blue-500',
-    },
-    {
-      title: 'Social Support',
-      value: predictiveData.socialSupport,
-      icon: Users,
-      description: 'Quality and availability of support network',
-      color: 'bg-purple-500',
+      description: 'Risk indicators from daily activity',
+      color: getRiskColor(riskData?.activity_risk || 0),
     },
   ];
 
@@ -127,10 +101,25 @@ const PredictiveAnalytics: React.FC<PredictiveAnalyticsProps> = ({ riskLevel }) 
       {/* Overall Wellness Score */}
       <Card className="shadow-lg border-l-4 border-l-blue-500">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-6 w-6 text-blue-600" />
-            AI-Powered Mental Health Prediction Dashboard
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-6 w-6 text-blue-600" />
+              AI-Powered Mental Health Prediction Dashboard
+            </CardTitle>
+            <Button 
+              onClick={runRiskAssessment}
+              disabled={isAssessing}
+              variant="outline"
+              size="sm"
+            >
+              {isAssessing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              <span className="ml-2">{isAssessing ? 'Assessing...' : 'Run Assessment'}</span>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between mb-4">
@@ -154,7 +143,7 @@ const PredictiveAnalytics: React.FC<PredictiveAnalyticsProps> = ({ riskLevel }) 
       </Card>
 
       {/* Risk Metrics Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-3 gap-6">
         {metrics.map((metric, index) => (
           <Card key={index} className="shadow-lg hover:shadow-xl transition-shadow">
             <CardHeader className="pb-3">
@@ -180,78 +169,42 @@ const PredictiveAnalytics: React.FC<PredictiveAnalyticsProps> = ({ riskLevel }) 
         ))}
       </div>
 
-      {/* Trend Analysis */}
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-indigo-600" />
-            Risk Trend Analysis
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {trendData.map((data, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium w-20">{data.period}</span>
-                  <Progress value={data.risk} className="w-40 h-2" />
-                  <span className="text-sm font-semibold">{data.risk}%</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {data.trend === 'increasing' ? (
-                    <TrendingUp className="h-4 w-4 text-red-500" />
-                  ) : data.trend === 'decreasing' ? (
-                    <TrendingDown className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <div className="w-4 h-0.5 bg-gray-400"></div>
-                  )}
-                  <span className="text-sm text-gray-600 capitalize">{data.trend}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Trend Analysis - removed as we're using real data */}
 
       {/* AI Insights & Recommendations */}
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-purple-600" />
-            🤖 AI Insights & Recommendations
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {aiInsights.map((insight, index) => (
-              <div key={index} className="p-3 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
-                <p className="text-sm text-gray-700 flex items-start gap-2">
-                  <span className="text-blue-600 font-semibold">AI:</span>
-                  {insight}
-                </p>
-              </div>
-            ))}
-          </div>
-          
-          <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border">
-            <h4 className="font-semibold text-gray-900 mb-2">🎯 Personalized Action Plan</h4>
-            <div className="space-y-2 text-sm">
-              {predictiveData.crisisRisk > 50 && (
-                <p className="text-red-700">• High crisis risk detected - immediate professional consultation recommended</p>
-              )}
-              {predictiveData.socialSupport < 60 && (
-                <p className="text-orange-700">• Low social support - consider reaching out to friends/family today</p>
-              )}
-              {predictiveData.stressLevel > 70 && (
-                <p className="text-yellow-700">• Elevated stress - try stress reduction techniques (meditation, exercise)</p>
-              )}
-              {predictiveData.resilienceScore > 70 && (
-                <p className="text-green-700">• Strong resilience detected - continue current coping strategies</p>
-              )}
+      {riskData?.ai_insights && (
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-purple-600" />
+              🤖 AI Insights & Recommendations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
+              <p className="text-sm text-gray-700">{riskData.ai_insights}</p>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+            
+            <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border">
+              <h4 className="font-semibold text-gray-900 mb-2">🎯 Personalized Action Plan</h4>
+              <div className="space-y-2 text-sm">
+                {riskData.mood_risk > 50 && (
+                  <p className="text-red-700">• Elevated mood risk - consider reaching out for support</p>
+                )}
+                {riskData.sleep_risk > 50 && (
+                  <p className="text-orange-700">• Sleep patterns need attention - establish consistent bedtime routine</p>
+                )}
+                {riskData.activity_risk > 50 && (
+                  <p className="text-yellow-700">• Low activity detected - try to increase daily movement</p>
+                )}
+                {riskData.overall_wellness > 70 && (
+                  <p className="text-green-700">• Great overall wellness - keep up your healthy habits!</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Model Information */}
       <Card className="shadow-lg border-gray-200">
@@ -261,14 +214,14 @@ const PredictiveAnalytics: React.FC<PredictiveAnalyticsProps> = ({ riskLevel }) 
         <CardContent>
           <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-600">
             <div>
-              <p><strong>Model Version:</strong> MindGuard v2.1</p>
-              <p><strong>Training Data:</strong> 500K+ anonymized mental health records</p>
-              <p><strong>Accuracy:</strong> 89.3% prediction accuracy</p>
+              <p><strong>Model:</strong> Google Gemini 2.5 Flash</p>
+              <p><strong>Provider:</strong> Lovable AI Gateway</p>
+              <p><strong>Processing:</strong> Real-time analysis</p>
             </div>
             <div>
-              <p><strong>Privacy:</strong> All processing done locally</p>
-              <p><strong>Updates:</strong> Real-time risk assessment</p>
-              <p><strong>Validation:</strong> Clinically validated algorithms</p>
+              <p><strong>Privacy:</strong> End-to-end encrypted</p>
+              <p><strong>Storage:</strong> Secure Supabase database</p>
+              <p><strong>Updates:</strong> On-demand risk assessment</p>
             </div>
           </div>
         </CardContent>

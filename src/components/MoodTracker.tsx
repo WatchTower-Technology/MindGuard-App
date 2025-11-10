@@ -4,9 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Smile, Meh, Frown, Heart, Zap, Cloud } from 'lucide-react';
+import { Smile, Meh, Frown, Heart, Zap, Cloud, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const MoodTracker = () => {
+  const { toast } = useToast();
   const [currentMood, setCurrentMood] = useState<number>(5);
   const [moodNote, setMoodNote] = useState('');
   const [moodHistory, setMoodHistory] = useState<Array<{
@@ -16,19 +19,29 @@ const MoodTracker = () => {
     triggers?: string[];
   }>>([]);
   const [detectedTriggers, setDetectedTriggers] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // AI-powered mood pattern analysis (simulated)
+  // Load mood history
   useEffect(() => {
-    if (moodNote.length > 10) {
-      // Simulate AI trigger detection from text analysis
-      const triggers = [];
-      if (moodNote.toLowerCase().includes('work')) triggers.push('Work Stress');
-      if (moodNote.toLowerCase().includes('sleep')) triggers.push('Sleep Issues');
-      if (moodNote.toLowerCase().includes('social')) triggers.push('Social Anxiety');
-      if (moodNote.toLowerCase().includes('family')) triggers.push('Family Tension');
-      setDetectedTriggers(triggers);
+    loadMoodHistory();
+  }, []);
+
+  const loadMoodHistory = async () => {
+    const { data, error } = await supabase
+      .from('mood_entries')
+      .select('*')
+      .order('timestamp', { ascending: false })
+      .limit(10);
+
+    if (!error && data) {
+      setMoodHistory(data.map(entry => ({
+        mood: parseInt(entry.mood),
+        note: entry.note || '',
+        timestamp: new Date(entry.timestamp),
+        triggers: entry.triggers || [],
+      })));
     }
-  }, [moodNote]);
+  };
 
   const moodEmojis = [
     { value: 1, icon: Frown, label: 'Very Low', color: 'text-red-600' },
@@ -43,20 +56,36 @@ const MoodTracker = () => {
     { value: 10, icon: Zap, label: 'Amazing', color: 'text-pink-600' },
   ];
 
-  const handleMoodSubmit = () => {
-    const newEntry = {
-      mood: currentMood,
-      note: moodNote,
-      timestamp: new Date(),
-      triggers: detectedTriggers,
-    };
-
-    setMoodHistory(prev => [newEntry, ...prev.slice(0, 9)]); // Keep last 10 entries
-    setMoodNote('');
-    setDetectedTriggers([]);
+  const handleMoodSubmit = async () => {
+    if (!moodNote.trim()) return;
     
-    // Simulate sending data to AI analysis engine
-    console.log('Mood data sent for analysis:', newEntry);
+    setIsSubmitting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-mood', {
+        body: { mood: currentMood.toString(), note: moodNote }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Mood recorded",
+        description: data.triggers.length > 0 
+          ? `AI detected ${data.triggers.length} potential triggers`
+          : "Your mood has been analyzed and saved",
+      });
+
+      setDetectedTriggers(data.triggers || []);
+      setMoodNote('');
+      await loadMoodHistory();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getAverageMood = () => {
@@ -136,9 +165,10 @@ const MoodTracker = () => {
           <Button 
             onClick={handleMoodSubmit} 
             className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-            disabled={!moodNote.trim()}
+            disabled={!moodNote.trim() || isSubmitting}
           >
-            Submit Mood Entry
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSubmitting ? 'Analyzing with AI...' : 'Submit Mood Entry'}
           </Button>
         </CardContent>
       </Card>

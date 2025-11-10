@@ -12,25 +12,35 @@ import ActivityAnalyzer from '@/components/ActivityAnalyzer';
 import CrisisPrevention from '@/components/CrisisPrevention';
 import PredictiveAnalytics from '@/components/PredictiveAnalytics';
 import UserMenu from '@/components/UserMenu';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   const [riskLevel, setRiskLevel] = useState('low');
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [isMonitoring, setIsMonitoring] = useState(true);
+  const [riskData, setRiskData] = useState<any>(null);
 
-  // Simulated real-time risk assessment
+  // Load latest risk assessment
   useEffect(() => {
-    const interval = setInterval(() => {
-      setLastUpdate(new Date());
-      // This would connect to real AI prediction engine
-      const risk = Math.random();
-      if (risk > 0.8) setRiskLevel('high');
-      else if (risk > 0.6) setRiskLevel('medium');
-      else setRiskLevel('low');
-    }, 30000); // Update every 30 seconds
-
+    loadRiskAssessment();
+    const interval = setInterval(loadRiskAssessment, 60000); // Update every minute
     return () => clearInterval(interval);
   }, []);
+
+  const loadRiskAssessment = async () => {
+    const { data, error } = await supabase
+      .from('risk_assessments')
+      .select('*')
+      .order('timestamp', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!error && data) {
+      setRiskLevel(data.risk_level);
+      setRiskData(data);
+      setLastUpdate(new Date(data.timestamp));
+    }
+  };
 
   const getRiskColor = (level: string) => {
     switch (level) {
@@ -144,7 +154,7 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
-            <PredictiveAnalytics riskLevel={riskLevel} />
+            <PredictiveAnalytics riskLevel={riskLevel} riskData={riskData} onRefresh={loadRiskAssessment} />
           </TabsContent>
 
           <TabsContent value="mood" className="space-y-6">

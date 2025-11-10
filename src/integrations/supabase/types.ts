@@ -7,13 +7,85 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "13.0.4"
   }
   public: {
     Tables: {
+      activity_entries: {
+        Row: {
+          behavior_alerts: string[] | null
+          created_at: string
+          exercise_minutes: number | null
+          id: string
+          outdoor_time: number | null
+          risk_score: number | null
+          screen_time: number | null
+          social_interactions: number | null
+          steps: number | null
+          timestamp: string
+          user_id: string
+        }
+        Insert: {
+          behavior_alerts?: string[] | null
+          created_at?: string
+          exercise_minutes?: number | null
+          id?: string
+          outdoor_time?: number | null
+          risk_score?: number | null
+          screen_time?: number | null
+          social_interactions?: number | null
+          steps?: number | null
+          timestamp?: string
+          user_id: string
+        }
+        Update: {
+          behavior_alerts?: string[] | null
+          created_at?: string
+          exercise_minutes?: number | null
+          id?: string
+          outdoor_time?: number | null
+          risk_score?: number | null
+          screen_time?: number | null
+          social_interactions?: number | null
+          steps?: number | null
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mood_entries: {
+        Row: {
+          created_at: string
+          id: string
+          mood: string
+          note: string | null
+          timestamp: string
+          triggers: string[] | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mood: string
+          note?: string | null
+          timestamp?: string
+          triggers?: string[] | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mood?: string
+          note?: string | null
+          timestamp?: string
+          triggers?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -38,6 +110,84 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      risk_assessments: {
+        Row: {
+          activity_risk: number | null
+          ai_insights: string | null
+          created_at: string
+          id: string
+          mood_risk: number | null
+          overall_wellness: number
+          risk_level: string
+          sleep_risk: number | null
+          timestamp: string
+          user_id: string
+        }
+        Insert: {
+          activity_risk?: number | null
+          ai_insights?: string | null
+          created_at?: string
+          id?: string
+          mood_risk?: number | null
+          overall_wellness: number
+          risk_level: string
+          sleep_risk?: number | null
+          timestamp?: string
+          user_id: string
+        }
+        Update: {
+          activity_risk?: number | null
+          ai_insights?: string | null
+          created_at?: string
+          id?: string
+          mood_risk?: number | null
+          overall_wellness?: number
+          risk_level?: string
+          sleep_risk?: number | null
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sleep_entries: {
+        Row: {
+          bedtime: string
+          created_at: string
+          duration: number
+          id: string
+          interruptions: number | null
+          quality: number
+          risk_factors: string[] | null
+          timestamp: string
+          user_id: string
+          wake_time: string
+        }
+        Insert: {
+          bedtime: string
+          created_at?: string
+          duration: number
+          id?: string
+          interruptions?: number | null
+          quality: number
+          risk_factors?: string[] | null
+          timestamp?: string
+          user_id: string
+          wake_time: string
+        }
+        Update: {
+          bedtime?: string
+          created_at?: string
+          duration?: number
+          id?: string
+          interruptions?: number | null
+          quality?: number
+          risk_factors?: string[] | null
+          timestamp?: string
+          user_id?: string
+          wake_time?: string
         }
         Relationships: []
       }
