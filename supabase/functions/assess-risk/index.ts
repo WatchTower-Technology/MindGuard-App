@@ -13,7 +13,14 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization')!;
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    
+    if (!authHeader) {
+      console.error('No authorization header found');
+      throw new Error('Missing authorization header');
+    }
+
+    console.log('Authorization header present, creating Supabase client');
     
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -21,8 +28,19 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Unauthorized');
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError) {
+      console.error('Error getting user:', userError);
+      throw new Error(`Authentication error: ${userError.message}`);
+    }
+    
+    if (!user) {
+      console.error('No user found despite valid header');
+      throw new Error('Unauthorized');
+    }
+
+    console.log('User authenticated:', user.id);
 
     // Fetch recent data
     const { data: moodData } = await supabase
