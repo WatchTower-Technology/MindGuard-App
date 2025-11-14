@@ -59,31 +59,31 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
+    <div className="min-h-screen bg-calm p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl">
-                <Brain className="h-8 w-8 text-white" />
+              <div className="p-3 bg-primary rounded-xl">
+                <Brain className="h-8 w-8 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                <h1 className="text-4xl font-bold text-primary">
                   MindGuard
                 </h1>
-                <p className="text-lg text-gray-600">AI-Powered Mental Health Crisis Prevention</p>
+                <p className="text-lg text-muted-foreground">AI-Powered Mental Health Crisis Prevention</p>
               </div>
             </div>
             <UserMenu />
           </div>
 
           {/* Risk Status Dashboard */}
-          <Card className="mb-6 border-l-4 border-l-purple-500 shadow-lg">
+          <Card className="mb-6 border-l-4 border-l-primary shadow-lg">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Shield className="h-6 w-6 text-purple-600" />
+                  <Shield className="h-6 w-6 text-primary" />
                   <CardTitle className="text-xl">Current Risk Assessment</CardTitle>
                 </div>
                 <div className="flex items-center gap-2">
@@ -95,8 +95,8 @@ const Index = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-700 mb-4">{getRiskDescription(riskLevel)}</p>
-              <div className="flex items-center gap-4 text-sm text-gray-500">
+              <p className="text-foreground mb-4">{getRiskDescription(riskLevel)}</p>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Activity className="h-4 w-4" />
                   <span>Monitoring: {isMonitoring ? 'Active' : 'Paused'}</span>
@@ -111,16 +111,16 @@ const Index = () => {
 
           {/* Crisis Alert */}
           {riskLevel === 'high' && (
-            <Card className="mb-6 border-red-500 bg-red-50 shadow-lg animate-pulse">
+            <Card className="mb-6 border-destructive bg-destructive/10 shadow-lg animate-pulse">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                  <AlertTriangle className="h-6 w-6 text-destructive" />
                   <div>
-                    <h3 className="font-semibold text-red-800">Crisis Prevention Alert</h3>
-                    <p className="text-red-700">Patterns indicate elevated risk. Immediate support resources available.</p>
+                    <h3 className="font-semibold text-destructive">Crisis Prevention Alert</h3>
+                    <p className="text-destructive/90">Patterns indicate elevated risk. Immediate support resources available.</p>
                   </div>
-                  <Button variant="destructive" className="ml-auto">
-                    Access Support
+                  <Button variant="destructive" className="ml-auto" onClick={() => window.open('tel:988', '_self')}>
+                    Call 988 Now
                   </Button>
                 </div>
               </CardContent>
@@ -130,7 +130,7 @@ const Index = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 bg-white shadow-lg rounded-lg p-1">
+          <TabsList className="grid w-full grid-cols-5 bg-card shadow-lg rounded-lg p-1">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <Heart className="h-4 w-4" />
               Dashboard
@@ -175,9 +175,9 @@ const Index = () => {
         </Tabs>
 
         {/* Footer */}
-        <div className="mt-12 text-center text-gray-500 border-t pt-8">
-          <p className="mb-2">🔒 Your data is processed locally and encrypted end-to-end</p>
-          <p className="text-sm">MindGuard - Preventing mental health crises through predictive analytics</p>
+        <div className="mt-12 text-center text-muted-foreground border-t border-border pt-8">
+          <p className="mb-2">🔒 Your data is encrypted and securely stored</p>
+          <p className="text-sm">MindGuard - Preventing mental health crises through AI-powered predictive analytics</p>
         </div>
       </div>
     </div>

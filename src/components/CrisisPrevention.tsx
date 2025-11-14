@@ -126,7 +126,17 @@ const CrisisPrevention: React.FC<CrisisPreventionProps> = ({ riskLevel }) => {
 
   const handleInterventionUse = (title: string) => {
     setInterventionsUsed(prev => [...prev, title]);
-    console.log(`Intervention used: ${title} at ${new Date().toISOString()}`);
+    
+    // Handle specific actions based on intervention type
+    if (title.includes('Professional Help') || title.includes('Call 988')) {
+      window.open('tel:988', '_self');
+    } else if (title.includes('Crisis Center')) {
+      window.open('https://www.samhsa.gov/find-help/national-helpline', '_blank');
+    } else if (title.includes('Crisis Support Chat')) {
+      window.open('https://988lifeline.org/chat/', '_blank');
+    } else if (title === 'Mindfulness Check-in' || title === 'Physical Activity') {
+      console.log('Starting guided session:', title);
+    }
   };
 
   const currentStrategies = interventionStrategies[riskLevel] || [];
@@ -134,10 +144,10 @@ const CrisisPrevention: React.FC<CrisisPreventionProps> = ({ riskLevel }) => {
   return (
     <div className="space-y-6">
       {/* Crisis Prevention Header */}
-      <Card className={`shadow-lg ${riskLevel === 'high' ? 'border-red-500 bg-red-50' : 'border-gray-200'}`}>
+      <Card className={`shadow-lg ${riskLevel === 'high' ? 'border-destructive bg-destructive/10' : 'border-border'}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-blue-600" />
+            <Shield className="h-5 w-5 text-primary" />
             Crisis Prevention & Early Intervention
           </CardTitle>
         </CardHeader>
@@ -145,8 +155,8 @@ const CrisisPrevention: React.FC<CrisisPreventionProps> = ({ riskLevel }) => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className={`w-4 h-4 rounded-full ${
-                riskLevel === 'high' ? 'bg-red-500 animate-pulse' :
-                riskLevel === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                riskLevel === 'high' ? 'bg-destructive animate-pulse' :
+                riskLevel === 'medium' ? 'bg-warning' : 'bg-success'
               }`}></div>
               <span className="font-semibold">
                 Current Risk Level: {riskLevel.toUpperCase()}
@@ -159,16 +169,16 @@ const CrisisPrevention: React.FC<CrisisPreventionProps> = ({ riskLevel }) => {
           </div>
 
           {riskLevel === 'high' && (
-            <Alert className="mb-4 border-red-500 bg-red-50">
+            <Alert className="mb-4 border-destructive bg-destructive/10">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription className="text-red-800">
+              <AlertDescription className="text-destructive">
                 <strong>Crisis Alert:</strong> Immediate professional intervention recommended. 
                 If you're having thoughts of self-harm, please reach out for help immediately.
               </AlertDescription>
             </Alert>
           )}
 
-          <p className="text-gray-700">
+          <p className="text-foreground">
             {riskLevel === 'high' 
               ? 'AI systems have detected patterns indicating immediate crisis risk. Multiple intervention resources are available.'
               : riskLevel === 'medium'
@@ -181,9 +191,9 @@ const CrisisPrevention: React.FC<CrisisPreventionProps> = ({ riskLevel }) => {
 
       {/* Emergency Contacts */}
       {(riskLevel === 'high' || riskLevel === 'medium') && (
-        <Card className="shadow-lg border-red-200 bg-red-50">
+        <Card className="shadow-lg border-destructive bg-destructive/10">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-800">
+            <CardTitle className="flex items-center gap-2 text-destructive">
               <Phone className="h-5 w-5" />
               Emergency Support Contacts
             </CardTitle>
@@ -191,12 +201,19 @@ const CrisisPrevention: React.FC<CrisisPreventionProps> = ({ riskLevel }) => {
           <CardContent>
             <div className="grid md:grid-cols-2 gap-4">
               {emergencyContacts.map((contact, index) => (
-                <div key={index} className="p-4 bg-white rounded-lg border border-red-200">
-                  <h4 className="font-semibold text-gray-900">{contact.name}</h4>
-                  <p className="text-lg font-bold text-red-600 my-2">{contact.number}</p>
+                <div key={index} className="p-4 bg-card rounded-lg border border-destructive/30">
+                  <h4 className="font-semibold text-foreground">{contact.name}</h4>
+                  <p className="text-lg font-bold text-destructive my-2">{contact.number}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Available: {contact.available}</span>
-                    <Button size="sm" variant="destructive">
+                    <span className="text-sm text-muted-foreground">Available: {contact.available}</span>
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      onClick={() => {
+                        const phoneNumber = contact.number.replace(/[^0-9]/g, '');
+                        window.open(`tel:${phoneNumber}`, '_self');
+                      }}
+                    >
                       Call Now
                     </Button>
                   </div>
@@ -211,7 +228,7 @@ const CrisisPrevention: React.FC<CrisisPreventionProps> = ({ riskLevel }) => {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Heart className="h-5 w-5 text-purple-600" />
+            <Heart className="h-5 w-5 text-primary" />
             Personalized Intervention Strategies
           </CardTitle>
         </CardHeader>
@@ -220,15 +237,23 @@ const CrisisPrevention: React.FC<CrisisPreventionProps> = ({ riskLevel }) => {
             {currentStrategies.map((strategy, index) => (
               <div 
                 key={index} 
-                className={`p-4 rounded-lg border-2 ${strategy.color} ${strategy.urgent ? 'animate-pulse' : ''}`}
+                className={`p-4 rounded-lg border-2 ${
+                  strategy.urgent 
+                    ? 'border-destructive bg-destructive/10 animate-pulse' 
+                    : 'border-border bg-calm'
+                }`}
               >
                 <div className="flex items-start gap-3">
-                  <strategy.icon className={`h-6 w-6 mt-1 ${strategy.urgent ? 'text-red-600' : 'text-gray-600'}`} />
+                  <strategy.icon className={`h-6 w-6 mt-1 ${
+                    strategy.urgent ? 'text-destructive' : 'text-primary'
+                  }`} />
                   <div className="flex-1">
-                    <h4 className={`font-semibold mb-2 ${strategy.urgent ? 'text-red-800' : 'text-gray-900'}`}>
+                    <h4 className={`font-semibold mb-2 ${
+                      strategy.urgent ? 'text-destructive' : 'text-foreground'
+                    }`}>
                       {strategy.title}
                     </h4>
-                    <p className="text-sm text-gray-700 mb-3">{strategy.description}</p>
+                    <p className="text-sm text-muted-foreground mb-3">{strategy.description}</p>
                     <div className="flex items-center justify-between">
                       <Button 
                         size="sm" 
